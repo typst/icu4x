@@ -331,12 +331,19 @@ fn generate_rule_break_data(
                 }
 
                 "line" => {
+                    if p.name == "OP_EA" {
+                        properties_map[0x201c] = property_index;
+                    }
+                    if p.name == "CP" {
+                        properties_map[0x201d] = property_index;
+                    }
                     if p.name == "CP_EA"
                         || p.name == "OP_OP30"
                         || p.name == "OP_EA"
                         || p.name == "ID_CN"
                         || p.name == "PO_EAW"
                         || p.name == "PR_EAW"
+                        || p.name == "QU"
                     {
                         for i in 0..(CODEPOINT_TABLE_LEN as u32) {
                             match lb.get32(i) {
@@ -385,6 +392,12 @@ fn generate_rule_break_data(
 
                                 LineBreak::PrefixNumeric => {
                                     if p.name == "PR_EAW" && is_cjk_fullwidth(eaw, i) {
+                                        properties_map[i as usize] = property_index;
+                                    }
+                                }
+
+                                LineBreak::Quotation => {
+                                    if p.name == "QU" && i != 0x201c && i != 0x201d {
                                         properties_map[i as usize] = property_index;
                                     }
                                 }
