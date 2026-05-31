@@ -367,6 +367,16 @@ fn generate_rule_break_data(
                 }
 
                 "line" => {
+                    // Set the properties for the curly quotes `U+201C` and
+                    // `U+201D` to `OP_EA` (`OpenPunctuation`) and `CP`
+                    // (`CloseParenthesis`), respectively.
+                    // See: https://github.com/unicode-org/icu4x/issues/5595
+                    if p.name == "OP_EA" {
+                        properties_trie.set_value(0x201c, property_index);
+                    }
+                    if p.name == "CP" {
+                        properties_trie.set_value(0x201d, property_index);
+                    }
                     if p.name == "CP_EA"
                         || p.name == "OP_OP30"
                         || p.name == "OP_EA"
@@ -376,6 +386,7 @@ fn generate_rule_break_data(
                         || p.name == "AL_DOTTED_CIRCLE"
                         || p.name == "QU_PI"
                         || p.name == "QU_PF"
+                        || p.name == "QU"
                     {
                         for cp in 0..(CODEPOINT_TABLE_LEN as u32) {
                             match lb.get32(cp) {
@@ -451,7 +462,17 @@ fn generate_rule_break_data(
                                     }
                                 }
 
-                                LineBreak::Quotation => {
+                                // Don't overwrite `U+201C` and `U+201D` as
+                                // `QU`, `QU_PI`, or `QU_PF`.
+                                LineBreak::Quotation if cp != 0x201c && cp != 0x201d => {
+                                    // Assign everything else in `QU` as normal
+                                    // since it was customized. Note that this
+                                    // may produce a less efficient trie than
+                                    // setting via ranges below.
+                                    if p.name == "QU" {
+                                        properties_trie.set_value(cp, property_index);
+                                    }
+
                                     if p.name == "QU_PI"
                                         && gc.get32(cp) == GeneralCategory::InitialPunctuation
                                     {
@@ -471,6 +492,7 @@ fn generate_rule_break_data(
                         continue;
                     }
 
+                    // `QU` would originally be set here.
                     let prop = lb_name_to_enum
                         .get_loose(&p.name)
                         .expect("property name should be valid!");
